@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kargo Takip Sistemi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 1.5rem; /* p-6 */
+        }
+        input[type="text"], input[type="email"], input[type="number"], select {
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 0.75rem 1rem; /* px-4 py-3 */
+            width: 100%;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6; /* border-blue-500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* ring-blue-500/25 */
+        }
+        .btn-primary {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: #ffffff;
+            padding: 0.75rem 1.5rem; /* px-6 py-3 */
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb; /* bg-blue-600 */
+        }
+        .btn-secondary {
+            background-color: #e5e7eb; /* bg-gray-200 */
+            color: #374151; /* text-gray-800 */
+            padding: 0.5rem 1rem; /* px-4 py-2 */
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 500; /* font-medium */
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-secondary:hover {
+            background-color: #d1d5db; /* bg-gray-300 */
+        }
+        .btn-danger {
+            background-color: #ef4444; /* bg-red-500 */
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; /* bg-red-600 */
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem; /* text-sm */
+        }
+        .status-hazirlaniyor { background-color: #bfdbfe; color: #1e40af; } /* bg-blue-200 text-blue-800 */
+        .status-teslim-alindi { background-color: #d1fae5; color: #065f46; } /* bg-green-200 text-green-800 */
+        .status-teslim-edildi { background-color: #fef3c7; color: #92400e; } /* bg-yellow-200 text-yellow-800 */
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+    <div class="container mx-auto space-y-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Kargo Takip Sistemi</h1>
+            <button id="toggleViewBtn" class="btn-primary"></button> <!-- Text will be set by JS -->
+        </div>
+
+        <!-- Main View (Kargo Ekleme ve Müşteri Takip) -->
+        <div id="mainView" class="space-y-8">
+            <!-- Yeni Kargo Ekleme Alanı -->
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">Yeni Kargo Ekle</h2>
+                <form id="addCargoForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="packageCount" class="block text-sm font-medium text-gray-700 mb-2">Kap Adeti</label>
+                        <input type="number" id="packageCount" name="packageCount" min="1" required class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="licensePlate" class="block text-sm font-medium text-gray-700 mb-2">Araç Plakası</label>
+                        <input type="text" id="licensePlate" name="licensePlate" required class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-2">Müşteri E-posta Adresi <span class="text-red-500">*</span></label>
+                        <input type="email" id="customerEmail" name="customerEmail" required class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="customerRefNumber" class="block text-sm font-medium text-gray-700 mb-2">Müşteri Referans Numarası (Opsiyonel)</label>
+                        <input type="text" id="customerRefNumber" name="customerRefNumber" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit" class="btn-primary">Kargo Ekle</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Yüklenen Kargolar Alanı (Müşteri Görüntüsü) -->
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">Yüklenen Kargolar</h2>
+                <div id="cargoList" class="space-y-4">
+                    <!-- Kargolar buraya dinamik olarak eklenecek -->
+                    <p class="text-gray-500 text-center" id="noCargoMessage">Henüz yüklenmiş kargo bulunmamaktadır.</p>
+                </div>
+            </div>
+
+            <!-- Müşteri Kargo Takip Alanı -->
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">Kargo Takip (Müşteri Alanı)</h2>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <input type="text" id="trackRefNumber" placeholder="RVG-XXXXX referans numarasını girin" class="flex-grow focus:ring-blue-500 focus:border-blue-500">
+                    <button id="trackCargoBtn" class="btn-primary flex-shrink-0">Kargo Takip Et</button>
+                </div>
+                <div id="trackingResult" class="p-4 rounded-lg bg-gray-50 border border-gray-200 hidden">
+                    <!-- Takip sonuçları buraya eklenecek -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin View (Yönetici Paneli) -->
+        <div id="adminView" class="space-y-8 hidden">
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">Yönetici Paneli</h2>
+                <div id="adminCargoList" class="space-y-4">
+                    <!-- Yönetici kargoları buraya dinamik olarak eklenecek -->
+                    <p class="text-gray-500 text-center" id="noAdminCargoMessage">Yönetici panelinde görüntülenecek kargo bulunmamaktadır.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Cargo Modal -->
+    <div id="editCargoModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold text-gray-700 mb-6">Kargo Düzenle</h3>
+            <form id="editCargoForm" class="grid grid-cols-1 gap-4">
+                <input type="hidden" id="editCargoId">
+                <div>
+                    <label for="editPackageCount" class="block text-sm font-medium text-gray-700 mb-2">Kap Adeti</label>
+                    <input type="number" id="editPackageCount" name="editPackageCount" min="1" required class="focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="editLicensePlate" class="block text-sm font-medium text-gray-700 mb-2">Araç Plakası</label>
+                    <input type="text" id="editLicensePlate" name="editLicensePlate" required class="focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="editCustomerEmail" class="block text-sm font-medium text-gray-700 mb-2">Müşteri E-posta Adresi <span class="text-red-500">*</span></label>
+                    <input type="email" id="editCustomerEmail" name="editCustomerEmail" required class="focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="editCustomerRefNumber" class="block text-sm font-medium text-gray-700 mb-2">Müşteri Referans Numarası (Opsiyonel)</label>
+                    <input type="text" id="editCustomerRefNumber" name="editCustomerRefNumber" class="focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" id="cancelEditBtn" class="btn-secondary">İptal</button>
+                    <button type="submit" class="btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let cargoItems = [];
+        const addCargoForm = document.getElementById('addCargoForm');
+        const cargoListDiv = document.getElementById('cargoList');
+        const trackRefNumberInput = document.getElementById('trackRefNumber');
+        const trackCargoBtn = document.getElementById('trackCargoBtn');
+        const trackingResultDiv = document.getElementById('trackingResult');
+        const noCargoMessage = document.getElementById('noCargoMessage');
+
+        // View kontrol değişkenleri
+        const toggleViewBtn = document.getElementById('toggleViewBtn');
+        const mainView = document.getElementById('mainView');
+        const adminView = document.getElementById('adminView');
+
+        // Admin Paneli değişkenleri
+        const adminCargoListDiv = document.getElementById('adminCargoList');
+        const noAdminCargoMessage = document.getElementById('noAdminCargoMessage');
+
+        // Edit Modal değişkenleri
+        const editCargoModal = document.getElementById('editCargoModal');
+        const editCargoForm = document.getElementById('editCargoForm');
+        const editCargoIdInput = document.getElementById('editCargoId');
+        const editPackageCountInput = document.getElementById('editPackageCount');
+        const editLicensePlateInput = document.getElementById('editLicensePlate');
+        const editCustomerEmailInput = document.getElementById('editCustomerEmail');
+        const editCustomerRefNumberInput = document.getElementById('editCustomerRefNumber');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        // Uygulama yüklendiğinde verileri localStorage'dan yükle ve doğru görünümü göster
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCargoItems();
+            handleHashChange(); // Sayfa yüklendiğinde URL hash'ini kontrol et
+            window.addEventListener('hashchange', handleHashChange); // Hash değiştiğinde görünümü güncelle
+        });
+
+        // URL hash'ine göre görünümü göster/gizle
+        function handleHashChange() {
+            const hash = window.location.hash;
+            if (hash === '#admin') {
+                showView('admin');
+            } else {
+                showView('main');
+            }
+        }
+
+        // Görünümleri yöneten fonksiyon
+        function showView(viewName) {
+            if (viewName === 'admin') {
+                mainView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                toggleViewBtn.textContent = 'Ana Sayfa';
+                renderAdminCargoList(); // Admin paneli gösterildiğinde listeyi yenile
+            } else {
+                mainView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                toggleViewBtn.textContent = 'Yönetici Paneli';
+                renderCargoList(); // Ana sayfa gösterildiğinde listeyi yenile
+            }
+        }
+
+        // RVG referans numarası oluşturma fonksiyonu
+        function generateRVGNumber() {
+            const timestamp = Date.now().toString().slice(-6); // Son 6 hane
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 haneli rastgele sayı
+            return `RVG-${timestamp}${random}`;
+        }
+
+        // Verileri localStorage'a kaydet
+        function saveCargoItems() {
+            localStorage.setItem('cargoTrackerData', JSON.stringify(cargoItems));
+        }
+
+        // Verileri localStorage'dan yükle
+        function loadCargoItems() {
+            const data = localStorage.getItem('cargoTrackerData');
+            if (data) {
+                cargoItems = JSON.parse(data);
+            }
+        }
+
+        // Kargo listesini render et (Müşteri görünümü)
+        function renderCargoList() {
+            cargoListDiv.innerHTML = ''; // Mevcut listeyi temizle
+
+            if (cargoItems.length === 0) {
+                noCargoMessage.classList.remove('hidden');
+            } else {
+                noCargoMessage.classList.add('hidden');
+                cargoItems.forEach(cargo => {
+                    const cargoCard = document.createElement('div');
+                    cargoCard.id = `cargo-${cargo.id}`; // Her kargo kartına benzersiz ID
+                    cargoCard.className = 'card flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-gray-200 shadow-sm transition-all duration-200 ease-in-out hover:shadow-md';
+                    
+                    let statusClass = '';
+                    switch (cargo.status) {
+                        case 'Hazırlanıyor':
+                            statusClass = 'status-hazirlaniyor';
+                            break;
+                        case 'Teslim Alındı':
+                            statusClass = 'status-teslim-alindi';
+                            break;
+                        case 'Teslim Edildi':
+                            statusClass = 'status-teslim-edildi';
+                            break;
+                    }
+
+                    cargoCard.innerHTML = `
+                        <div class="flex-grow mb-4 md:mb-0">
+                            <p class="text-lg font-bold text-gray-800 mb-1">Referans No: <span class="text-blue-600">${cargo.id}</span></p>
+                            ${cargo.customerRefNumber ? `<p class="text-gray-600">Müşteri Referans No: ${cargo.customerRefNumber}</p>` : ''}
+                            <p class="text-gray-600">Kap Adeti: ${cargo.packageCount}</p>
+                            <p class="text-gray-600">Araç Plakası: ${cargo.licensePlate}</p>
+                            <p class="text-gray-600">Müşteri E-posta: ${cargo.customerEmail}</p>
+                            <p class="mt-2 text-sm font-semibold">Durum: <span class="status-badge ${statusClass}">${cargo.status}</span></p>
+                        </div>
+                    `;
+                    // Müşteri görünümünde sadece durumu göster, güncelleme butonları admin panelinde
+                    cargoListDiv.appendChild(cargoCard);
+                });
+            }
+        }
+
+        // Yönetici kargo listesini render et
+        function renderAdminCargoList() {
+            adminCargoListDiv.innerHTML = ''; // Mevcut listeyi temizle
+
+            if (cargoItems.length === 0) {
+                noAdminCargoMessage.classList.remove('hidden');
+            } else {
+                noAdminCargoMessage.classList.add('hidden');
+                cargoItems.forEach(cargo => {
+                    const cargoCard = document.createElement('div');
+                    cargoCard.id = `admin-cargo-${cargo.id}`; // Her kargo kartına benzersiz ID
+                    cargoCard.className = 'card flex flex-col md:flex-row items-start md:items-center justify-between p-4 border border-gray-200 shadow-sm transition-all duration-200 ease-in-out hover:shadow-md';
+                    
+                    let statusClass = '';
+                    switch (cargo.status) {
+                        case 'Hazırlanıyor':
+                            statusClass = 'status-hazirlaniyor';
+                            break;
+                        case 'Teslim Alındı':
+                            statusClass = 'status-teslim-alindi';
+                            break;
+                        case 'Teslim Edildi':
+                            statusClass = 'status-teslim-edildi';
+                            break;
+                    }
+
+                    cargoCard.innerHTML = `
+                        <div class="flex-grow mb-4 md:mb-0">
+                            <p class="text-lg font-bold text-gray-800 mb-1">Referans No: <span class="text-blue-600">${cargo.id}</span></p>
+                            ${cargo.customerRefNumber ? `<p class="text-gray-600">Müşteri Referans No: ${cargo.customerRefNumber}</p>` : ''}
+                            <p class="text-gray-600">Kap Adeti: ${cargo.packageCount}</p>
+                            <p class="text-gray-600">Araç Plakası: ${cargo.licensePlate}</p>
+                            <p class="text-gray-600">Müşteri E-posta: ${cargo.customerEmail}</p>
+                            <p class="mt-2 text-sm font-semibold">Durum: <span class="status-badge ${statusClass}">${cargo.status}</span></p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
+                            <button data-id="${cargo.id}" data-status="Teslim Alındı" class="btn-secondary update-status-btn">Teslim Alındı</button>
+                            <button data-id="${cargo.id}" data-status="Teslim Edildi" class="btn-secondary update-status-btn">Teslim Edildi</button>
+                            <button data-id="${cargo.id}" class="btn-secondary edit-cargo-btn">Düzenle</button>
+                            <button data-id="${cargo.id}" class="btn-danger delete-cargo-btn">Sil</button>
+                        </div>
+                    `;
+                    adminCargoListDiv.appendChild(cargoCard);
+                });
+
+                // Durum güncelleme butonlarına event listener ekle (Admin Paneli)
+                document.querySelectorAll('.update-status-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const id = event.target.dataset.id;
+                        const newStatus = event.target.dataset.status;
+                        updateCargoStatus(id, newStatus);
+                    });
+                });
+
+                // Düzenle butonlarına event listener ekle
+                document.querySelectorAll('.edit-cargo-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const id = event.target.dataset.id;
+                        openEditModal(id);
+                    });
+                });
+
+                // Sil butonlarına event listener ekle
+                document.querySelectorAll('.delete-cargo-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const id = event.target.dataset.id;
+                        deleteCargo(id);
+                    });
+                });
+            }
+        }
+
+        // Yeni kargo ekleme formu submit edildiğinde
+        addCargoForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Formun varsayılan submit davranışını engelle
+
+            const packageCount = document.getElementById('packageCount').value;
+            const licensePlate = document.getElementById('licensePlate').value;
+            const customerEmail = document.getElementById('customerEmail').value;
+            const customerRefNumber = document.getElementById('customerRefNumber').value;
+
+            const newCargo = {
+                id: generateRVGNumber(),
+                packageCount: parseInt(packageCount),
+                licensePlate: licensePlate,
+                status: 'Hazırlanıyor', // Varsayılan durum
+                customerEmail: customerEmail,
+                customerRefNumber: customerRefNumber || null
+            };
+
+            cargoItems.push(newCargo);
+            saveCargoItems(); // Verileri kaydet
+            renderCargoList(); // Müşteri listesini yeniden çiz
+            renderAdminCargoList(); // Yönetici listesini yeniden çiz
+
+            // Formu temizle
+            addCargoForm.reset();
+
+            // Müşteriye e-posta gönderme simülasyonu
+            simulateEmailSend(newCargo.customerEmail, 'Yeni Kargo Oluşturuldu', `Kargonuz için referans numaranız: ${newCargo.id}. Müşteri referans numaranız: ${newCargo.customerRefNumber || 'Belirtilmedi'}. Durumu: ${newCargo.status}.`);
+        });
+
+        // Kargo durumunu güncelleme fonksiyonu
+        function updateCargoStatus(id, newStatus) {
+            const cargoIndex = cargoItems.findIndex(cargo => cargo.id === id);
+            if (cargoIndex > -1) {
+                cargoItems[cargoIndex].status = newStatus;
+                saveCargoItems(); // Verileri kaydet
+                renderCargoList(); // Müşteri listesini yeniden çiz
+                renderAdminCargoList(); // Yönetici listesini yeniden çiz
+
+                // Müşteriye e-posta gönderme simülasyonu
+                const updatedCargo = cargoItems[cargoIndex];
+                simulateEmailSend(updatedCargo.customerEmail, 'Kargo Durumu Güncellendi', `Kargonuzun durumu güncellendi: ${updatedCargo.status}. Referans numaranız: ${updatedCargo.id}. Müşteri referans numaranız: ${updatedCargo.customerRefNumber || 'Belirtilmedi'}.`);
+            } else {
+                console.error('Kargo bulunamadı:', id);
+            }
+        }
+
+        // Müşteri kargo takip butonu tıklandığında
+        trackCargoBtn.addEventListener('click', () => {
+            const refNumber = trackRefNumberInput.value.trim();
+            if (refNumber) {
+                const foundCargo = cargoItems.find(cargo => cargo.id === refNumber || cargo.customerRefNumber === refNumber); // Hem RVG hem de müşteri referans numarası ile arama
+                if (foundCargo) {
+                    trackingResultDiv.classList.remove('hidden');
+                    let statusClass = '';
+                    switch (foundCargo.status) {
+                        case 'Hazırlanıyor':
+                            statusClass = 'status-hazirlaniyor';
+                            break;
+                        case 'Teslim Alındı':
+                            statusClass = 'status-teslim-alindi';
+                            break;
+                        case 'Teslim Edildi':
+                            statusClass = 'status-teslim-edildi';
+                            break;
+                    }
+                    trackingResultDiv.innerHTML = `
+                        <p class="text-lg font-bold text-gray-800 mb-2">Referans No: <span class="text-blue-600">${foundCargo.id}</span></p>
+                        ${foundCargo.customerRefNumber ? `<p class="text-gray-700">Müşteri Referans No: ${foundCargo.customerRefNumber}</p>` : ''}
+                        <p class="text-gray-700">Kap Adeti: ${foundCargo.packageCount}</p>
+                        <p class="text-gray-700">Araç Plakası: ${foundCargo.licensePlate}</p>
+                        <p class="mt-2 text-base font-semibold">Durum: <span class="status-badge ${statusClass}">${foundCargo.status}</span></p>
+                    `;
+                } else {
+                    trackingResultDiv.classList.remove('hidden');
+                    trackingResultDiv.innerHTML = `<p class="text-red-600 font-semibold">Belirtilen referans numarasına sahip kargo bulunamadı.</p>`;
+                }
+            } else {
+                trackingResultDiv.classList.remove('hidden');
+                trackingResultDiv.innerHTML = `<p class="text-yellow-600 font-semibold">Lütfen bir referans numarası girin.</p>`;
+            }
+        });
+
+        // E-posta gönderme simülasyonu (Gerçek e-posta için arka uç gereklidir)
+        function simulateEmailSend(toEmail, subject, body) {
+            console.log(`E-posta gönderiliyor:`);
+            console.log(`Kime: ${toEmail}`);
+            console.log(`Konu: ${subject}`);
+            console.log(`İçerik: ${body}`);
+            // Gerçek bir uygulamada burada bir API çağrısı veya arka uç isteği olurdu.
+            // Örneğin: fetch('/api/send-email', { method: 'POST', body: JSON.stringify({ toEmail, subject, body }) });
+        }
+
+        // Yönetici Paneli açma/kapama
+        toggleViewBtn.addEventListener('click', () => {
+            if (window.location.hash === '#admin') {
+                window.location.hash = '#main'; // Ana sayfaya dön
+            } else {
+                window.location.hash = '#admin'; // Yönetici paneline git
+            }
+        });
+
+        // Kargo düzenleme modalını aç
+        function openEditModal(id) {
+            const cargoToEdit = cargoItems.find(cargo => cargo.id === id);
+            if (cargoToEdit) {
+                editCargoIdInput.value = cargoToEdit.id;
+                editPackageCountInput.value = cargoToEdit.packageCount;
+                editLicensePlateInput.value = cargoToEdit.licensePlate;
+                editCustomerEmailInput.value = cargoToEdit.customerEmail;
+                editCustomerRefNumberInput.value = cargoToEdit.customerRefNumber || '';
+                editCargoModal.classList.remove('hidden');
+            }
+        }
+
+        // Kargo düzenleme modalını kapat
+        function closeEditModal() {
+            editCargoModal.classList.add('hidden');
+            editCargoForm.reset();
+        }
+
+        // Kargo düzenleme formu submit edildiğinde
+        editCargoForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const id = editCargoIdInput.value;
+            const newPackageCount = parseInt(editPackageCountInput.value);
+            const newLicensePlate = editLicensePlateInput.value;
+            const newCustomerEmail = editCustomerEmailInput.value;
+            const newCustomerRefNumber = editCustomerRefNumberInput.value || null;
+
+            const cargoIndex = cargoItems.findIndex(cargo => cargo.id === id);
+            if (cargoIndex > -1) {
+                cargoItems[cargoIndex].packageCount = newPackageCount;
+                cargoItems[cargoIndex].licensePlate = newLicensePlate;
+                cargoItems[cargoIndex].customerEmail = newCustomerEmail;
+                cargoItems[cargoIndex].customerRefNumber = newCustomerRefNumber;
+                saveCargoItems();
+                renderCargoList();
+                renderAdminCargoList();
+                closeEditModal();
+            } else {
+                console.error('Düzenlenecek kargo bulunamadı:', id);
+            }
+        });
+
+        // Kargo düzenleme modalını iptal et
+        cancelEditBtn.addEventListener('click', () => {
+            closeEditModal();
+        });
+
+        // Kargo silme fonksiyonu
+        function deleteCargo(id) {
+            // Gerçek uygulamada alert/confirm yerine özel modal kullanın
+            if (confirm('Bu kargoyu silmek istediğinizden emin misiniz?')) { 
+                cargoItems = cargoItems.filter(cargo => cargo.id !== id);
+                saveCargoItems();
+                renderCargoList();
+                renderAdminCargoList();
+            }
+        }
+    </script>
+</body>
+</html>
+
